@@ -1,0 +1,42 @@
+name: merge new link PRs
+
+on: 
+    pull_request:
+        types:
+            - opened
+
+jobs:
+    check-pr:
+        runs-on: ubuntu-latest
+        steps:
+            - name: checkout
+              uses: actions/checkout@v2
+            
+            - name: git
+              run: |
+                git config --global user.name "github-actions"
+                git config --global user.email "github-actions@github.com"
+            
+            - name: sanity check
+              run: |
+                PR_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '.md')
+                if [ $(echo "$PR_FILES" | wc -l) -ne 1 ]; then
+                    echo "Error: PR must contain exactly one markdown file."
+                    exit 1
+                fi
+
+            - name: correct formatting
+              run: |
+                PR_FILE=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '.md')
+                CONTENT=$(cat $PR_FILE)
+                if [[ ! "$CONTENT" =~ ^---\nlayout:\ forward\ntarget:\ https?://.*\n--- ]]; then
+                    echo "Error: Markdown file does not match the required front matter format."
+                    exit 1
+                fi
+
+            - name: Approve PR
+              run: |
+                gh pr review --approve --body "lgtm" "${{ github.event.pull_request.html_url }}" || true
+                gh pr merge --auto --delete-branch --subject "yolo" --merge "${{ github.event.pull_request.html_url }}"
+              env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
