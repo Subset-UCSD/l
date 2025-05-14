@@ -24,6 +24,8 @@ jobs:
                     gh pr close "${{ github.event.pull_request.html_url }}" --delete-branch --comment "try again with a single markdown file"
                     exit 1
                 fi
+              env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                 
 
             - name: correct formatting
@@ -41,6 +43,8 @@ jobs:
                     gh pr close "${{ github.event.pull_request.html_url }}" --delete-branch --comment "try again bozo"
                     exit 1
                 fi
+              env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Approve PR
               run: |
