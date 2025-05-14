@@ -19,18 +19,26 @@ jobs:
             
             - name: sanity check
               run: |
-                PR_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '.md')
-                if [ $(echo "$PR_FILES" | wc -l) -ne 1 ]; then
-                    echo "Error: PR must contain exactly one markdown file."
+                FILES=$(gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path')
+                if [ $(echo "$FILES" | wc -l) -ne 1 ] || [[ $(echo "$FILES") != *.md ]]; then
+                    gh pr close "${{ github.event.pull_request.html_url }}" --delete-branch --comment "try again with a single markdown file"
                     exit 1
                 fi
+                
 
             - name: correct formatting
               run: |
-                PR_FILE=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '.md')
-                CONTENT=$(cat $PR_FILE)
-                if [[ ! "$CONTENT" =~ ^---\nlayout:\ forward\ntarget:\ https?://.*\n--- ]]; then
-                    echo "Error: Markdown file does not match the required front matter format."
+                MD_FILE=$(cat "$FILES")
+                
+                # Check file format using grep patterns
+                if echo "$MD_FILE" | grep -q "^---$" && 
+                   echo "$MD_FILE" | grep -q "^layout: forward$" && 
+                   echo "$MD_FILE" | grep -q "^target: https://"; then
+                    echo "correct file format"
+                fi
+                else
+                    echo "incorrect form rat"
+                    gh pr close "${{ github.event.pull_request.html_url }}" --delete-branch --comment "try again bozo"
                     exit 1
                 fi
 
